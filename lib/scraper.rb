@@ -4,41 +4,37 @@ require 'pry'
 class Scraper
 
   def self.scrape_index_page(index_url)
-    page = Nokogiri::HTML(open(index_url))
-    students = []
-
-    page.css("div.student-card").each do |student|
-      name = student.css(".student-name").text
-      location = student.css(".student-location").text
-      profile_url = student.css("a").attribute("href").value
-      student_info = {:name => name,
-                :location => location,
-                :profile_url => profile_url}
-      students << student_info
-      end
-    students
+    html = open(index_url)
+    doc = Nokogiri::HTML(html)
+    student_cards = doc.css(".student-card a")
+    student_cards.collect do |element|
+      {:name => element.css(".student-name").text ,
+        :location => element.css(".student-location").text,
+        :profile_url => element.attr('href')
+      }
+    end
   end
 
   def self.scrape_profile_page(profile_url)
-    page = Nokogiri::HTML(open(profile_url))
-      student = {}
-      container = page.css(".social-icon-container a").collect{|icon| icon.attribute("href").value}
-      container.each do |link|
-        if link.include?("twitter")
-          student[:twitter] = link
-        elsif link.include?("linkedin")
-          student[:linkedin] = link
-        elsif link.include?("github")
-          student[:github] = link
-        elsif link.include?(".com")
-          student[:blog] = link
+    html = open(profile_url)
+    doc = Nokogiri::HTML(html)
+    return_hash = {}
+
+      social = doc.css(".vitals-container .social-icon-container a")
+      social.each do |element|
+        if element.attr('href').include?("twitter")
+          return_hash[:twitter] = element.attr('href')
+        elsif element.attr('href').include?("linkedin")
+          return_hash[:linkedin] = element.attr('href')
+        elsif element.attr('href').include?("github")
+          return_hash[:github] = element.attr('href')
+        elsif element.attr('href').end_with?("com/")
+          return_hash[:blog] = element.attr('href')
         end
       end
-      student[:profile_quote] = page.css(".profile-quote").text
-      student[:bio] = page.css("div.description-holder p").text
-      student
-  end
-  end
+      return_hash[:profile_quote] = doc.css(".vitals-container .vitals-text-container .profile-quote").text
+      return_hash[:bio] = doc.css(".bio-block.details-block .bio-content.content-holder .description-holder p").text
 
+  return_hash
+  end
 end
-
